@@ -22,6 +22,21 @@ class Member(models.Model):
     def __str__(self) -> str:
         return f"{self.name} ({self.member_id})"
 
+    # --- validation (refactoring A2) ------------------------------------
+
+    def clean(self):
+        """Legacy validated in MemberManager.addMember after building a
+        half-initialised Member (requestedId + setId()). The entity now
+        validates itself; member IDs stay case-sensitive as in legacy."""
+        self.member_id = (self.member_id or "").strip()
+        self.name = (self.name or "").strip()
+        if not self.member_id:
+            raise ValidationError("Member ID field is blank. Please input again")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
     # --- creation -------------------------------------------------------
 
     @classmethod

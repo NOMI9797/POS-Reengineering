@@ -1,0 +1,25 @@
+# Python / Django
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+.env
+staticfiles/
+media/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Legacy runtime data (created by copying data-sample/ to data/)
+legacy-pos/data/
+legacy-pos/out/
+legacy-pos/bin/
+
+# Java build output
+*.class
+
+# OS / editors
+.DS_Store
+.idea/workspace.xml
+.vscode/

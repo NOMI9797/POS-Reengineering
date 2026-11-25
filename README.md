@@ -17,7 +17,7 @@ The result is a layered **Python + Django** application backed by a relational d
 | Folder | Contents |
 |---|---|
 | [`legacy-pos/`](legacy-pos/) | Original legacy system, **unmodified** baseline (source: `github.com/yangzai/unit1-ca`, commit `87bee5f`). Git tag `legacy-baseline`. |
-| `reengineered/` | Reengineered Django application *(in progress)* |
+| [`reengineered/`](reengineered/) | Reengineered Django application *(in progress; see its [README](reengineered/README.md))* |
 | [`docs/`](docs/) | Technical report sources: inventory, legacy documentation, risk register, refactoring logs ([index](docs/README.md)) |
 | [`analysis/`](analysis/) | Executable evidence from analysing the legacy code (defect probes P1–P8) |
 | `presentation/` | Slides *(to be added)* |
@@ -42,12 +42,20 @@ Reproduce the legacy defects:
 
 ## Running the reengineered system
 
-*To be added once the Django project is in place* (Python 3.12/3.13, Django 5.2 LTS).
+Requires Python 3.12 or 3.13 (Django 5.2 LTS).
+
+```bash
+cd reengineered
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py test        # 44 tests
+```
 
 ## Team and work distribution
 
 | Member | Phases owned | Refactorings | Deliverables |
 |---|---|---|---|
-| Member A: Malik Nouman Ahmed | 1 Inventory Analysis, 2 Document Restructuring, legacy documentation, risk register | A1–A3 (domain model) | `docs/01`–`05`, `analysis/` |
+| Member A: Malik Nouman Ahmed | 1 Inventory Analysis, 2 Document Restructuring, legacy documentation, risk register | A1–A3 (domain model) | `docs/01`–`05`, `analysis/`, Django skeleton, `core/money.py`, `members/`, `inventory/` (Category) |
 | Member B | 3 Reverse Engineering, 5 Data Restructuring | B1–B3 (persistence) | *tbd* |
 | Member C | 6 Forward Engineering, testing | C1–C3 (service/UI) | *tbd* |

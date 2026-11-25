@@ -19,6 +19,8 @@ Each refactoring is committed separately, and the commit hash is recorded in the
 | A2 | **Remove Setting Method + Move validation into constructor** (self-validating entity) | Temporal coupling (`requestedId` → `setId()`), duplicated and inconsistent validation | `Category`, `CategoryManager` (same pattern in `Member`, `Discount`) |
 | A3 | **Replace Primitive with Object** (Money value object) | Primitive obsession: money held in `double` | `Product`, `Transaction`, `Util`, receipt/payment code |
 
+**Status:** all three implemented. Run with `cd reengineered && python manage.py test` (44 tests total, all passing).
+
 ---
 
 ## A1: Replace magic number `-1` with explicit "has purchased" state
@@ -68,6 +70,12 @@ class Member(models.Model):
     loyalty_points = models.PositiveIntegerField(default=0)   # invariant: never negative
     has_purchased = models.BooleanField(default=False)        # replaces the -1 sentinel
 
+    @classmethod
+    def from_legacy(cls, name, member_id, legacy_points):    # used by the data migration
+        if legacy_points < 0:                                  # legacy used "< 0", not "== -1"
+            return cls(member_id=member_id, name=name, loyalty_points=0, has_purchased=False)
+        return cls(member_id=member_id, name=name, loyalty_points=legacy_points, has_purchased=True)
+
     @property
     def is_first_purchase(self) -> bool:
         return not self.has_purchased
@@ -78,18 +86,20 @@ class Member(models.Model):
         self.loyalty_points -= points
 
     def record_purchase(self, earned_points: int) -> None:
+        if earned_points < 0:
+            raise ValidationError("Earned points cannot be negative")
         self.loyalty_points += earned_points
         self.has_purchased = True
 
 
-# discounts/services.py – eligibility reads intent, not a number
+# How callers use it (discount eligibility is built in Member C's refactoring C3):
 if discount.code == DiscountCodes.MEMBER_FIRST:
     return member.is_first_purchase
 if discount.code == DiscountCodes.MEMBER_SUBSEQ:
     return not member.is_first_purchase
 
-# checkout template / view – no special case needed any more
-max_points = member.loyalty_points
+# checkout (Member C, C2): no special case needed any more
+max_points = min(member.loyalty_points, total.whole_units_of(5))
 ```
 
 **Mechanics:**
@@ -116,9 +126,15 @@ max_points = member.loyalty_points
 | First purchase, subtotal $73.65 | points −1 → 7 | 0 → 7, `has_purchased = True` |
 | First purchase, subtotal $5 | points −1 → 0, then `MEMBER_SUBSEQ` next time | 0, `has_purchased = True` → `MEMBER_SUBSEQ` |
 | Redeem more than balance | `IllegalArgumentException` "Loyalty Point is not enough" | `ValidationError` with the same message |
+| Redeem then earn (150 − 13 + 7) | 144 | 144 |
 
-| Commit | _to be filled: `<hash>`_ |
+The first two rows are checked at the model level (`is_first_purchase`); they become full discount-selection tests once the `discounts` app exists (C3).
+
+| Implementation | |
 |---|---|
+| Commit | `d7579b1` |
+| Code | `reengineered/members/models.py` |
+| Tests | `reengineered/members/tests/test_member_loyalty.py`: 12 tests, all passing |
 
 ---
 
@@ -165,7 +181,7 @@ CATEGORY_CODE = re.compile(r"^[A-Z]{3}$")
 
 class Category(models.Model):
     code = models.CharField(max_length=3, primary_key=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, blank=True)
 
     def clean(self):
         self.code = (self.code or "").strip().upper()
@@ -175,18 +191,23 @@ class Category(models.Model):
         if not CATEGORY_CODE.match(self.code):
             raise ValidationError("Category ID must be three letter code")
 
+    def save(self, *args, **kwargs):
+        self.clean()          # every path (forms, legacy import, admin) is validated
+        super().save(*args, **kwargs)
+
 
 # inventory/services.py – only the rule that needs the whole table (uniqueness) stays here
 def add_category(code: str, name: str) -> Category:
     category = Category(code=code, name=name)
     category.clean()                                    # always valid or raises
-    if category_repository.exists(category.code):
+    if Category.objects.filter(code=category.code).exists():   # → repository in B1
         raise ValidationError(
             f"Category {category.code} already existed. Please input again")
-    return category_repository.save(category)
+    category.save()
+    return category
 ```
 
-The same steps are applied to `Member` (non-blank, trimmed ID) and `Discount` (non-blank, upper-cased code).
+The same steps are applied to `Member`: `Member.clean()` trims the ID and rejects a blank one with the legacy message "Member ID field is blank. Please input again". `members/services.add_member` keeps the duplicate check ("Member ID … already existed. Please input again"), and member IDs stay case-sensitive as in legacy. `Discount` gets the same treatment when the `discounts` app is built (C3).
 
 **Mechanics:**
 1. Add tests for blank, wrong length, duplicate, lower-case and valid input.
@@ -205,9 +226,13 @@ The same steps are applied to `Member` (non-blank, trimmed ID) and `Discount` (n
 | duplicate `CLO` | "Category CLO already existed…" | same message | |
 | `bks` | stored as `bks`, then **unreachable** | stored as `BKS`, usable | **Deviation D-A2a**: fixes defect L-04 |
 | `AB1` | accepted | rejected: "three letter code" | **Deviation D-A2b**: matches the legacy error text and the vendor-file rule `[A-Z]{3}` (`VendorManager.java:38`) |
+| `Category(code="TOOLONG").save()` directly | (no such path) | rejected, nothing saved | entity guards the database |
 
-| Commit | _to be filled: `<hash>`_ |
+| Implementation | |
 |---|---|
+| Commit | `4dda7ef` |
+| Code | `reengineered/inventory/models.py`, `inventory/services.py`, `members/models.py` (`clean`/`save`), `members/services.py` |
+| Tests | `reengineered/inventory/tests/test_category_validation.py` (12) + `members/tests/test_member_validation.py` (5): 17 tests, all passing |
 
 ---
 
@@ -244,48 +269,36 @@ public static String formatDollar(double amount) { return "$" + String.format("%
 ### After
 
 ```python
-# core/money.py
-from dataclasses import dataclass
-from decimal import Decimal, ROUND_HALF_UP, ROUND_FLOOR
-
-CENT = Decimal("0.01")
-
-@dataclass(frozen=True)
+# core/money.py (abridged; see the file for the full class)
+@dataclass(frozen=True, order=True)
 class Money:
     amount: Decimal                                    # always 2 decimal places
 
     def __post_init__(self):
-        value = Decimal(str(self.amount)).quantize(CENT, rounding=ROUND_HALF_UP)
+        if isinstance(self.amount, float):             # binary floats are refused
+            raise TypeError("Money cannot be created from float; pass a str, int or Decimal")
+        value = Decimal(self.amount).quantize(CENT, rounding=ROUND_HALF_UP)
         object.__setattr__(self, "amount", value)
 
-    def __add__(self, other: "Money") -> "Money": return Money(self.amount + other.amount)
-    def __sub__(self, other: "Money") -> "Money": return Money(self.amount - other.amount)
-    def times(self, quantity: int) -> "Money":    return Money(self.amount * quantity)
+    def __add__(self, other): return Money(self.amount + other.amount)
+    def __sub__(self, other): return Money(self.amount - other.amount)
+    def times(self, quantity: int): return Money(self.amount * quantity)
 
-    def percent_of(self, percent: Decimal) -> "Money":   # rounded once, here
-        return Money(self.amount * Decimal(percent) / 100)
+    def percent_of(self, percent):                     # rounded once, here
+        return Money(self.amount * Decimal(str(percent)) / 100)
 
-    def whole_units_of(self, divisor: int) -> int:
-        """floor(amount / divisor): points earned (/10) and max redeemable (/5)."""
+    def whole_units_of(self, divisor: int) -> int:     # floor: points /10, redeem /5
         return int((self.amount / divisor).to_integral_value(rounding=ROUND_FLOOR))
 
-    def is_negative(self) -> bool: return self.amount < 0
-    def __str__(self) -> str:      return f"${self.amount}"
+    def __str__(self): return f"${self.amount}"
 
 Money.ZERO = Money(Decimal("0"))
 
 
-# sales/models.py (domain logic on the sale)
-class Sale(models.Model):
-    ...
-    def subtotal(self) -> Money:
-        return sum((line.line_total() for line in self.lines.all()), Money.ZERO)
-
-    def discount_amount(self) -> Money:
-        return self.subtotal().percent_of(self.discount_percent) if self.discount_percent else Money.ZERO
-
-    def total(self) -> Money:
-        return self.subtotal() - self.discount_amount()      # 73.65 − 7.37 = 66.28
+# Intended use in the sales app (Member C, refactoring C2):
+subtotal = sum((line.unit_price.times(line.quantity) for line in lines), Money.ZERO)
+discount = subtotal.percent_of(discount_percent)
+total    = subtotal - discount                         # 73.65 − 7.37 = 66.28
 ```
 
 **Mechanics:**
@@ -304,9 +317,13 @@ class Sale(models.Model):
 | Max redeemable on total (÷5, floor) | ⌊66.285 / 5⌋ = 13 | ⌊66.28 / 5⌋ = 13 |
 | Discount 10 % of 73.65 | shows $7.37 | $7.37 |
 | Total after discount | shows **$66.29** (inconsistent) | **$66.28** (= 73.65 − 7.37). **Deviation D-A3**: 1-cent correction so the receipt adds up. |
+| Rounding 2.675 | float would give 2.67 | 2.68 (half-up) |
 
-| Commit | _to be filled: `<hash>`_ |
+| Implementation | |
 |---|---|
+| Commit | `31f0468` |
+| Code | `reengineered/core/money.py` |
+| Tests | `reengineered/core/tests/test_money.py`: 15 tests, all passing |
 
 ---
 

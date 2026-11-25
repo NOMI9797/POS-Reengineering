@@ -1,0 +1,11 @@
+P1 before: [1,CLO/1,F42563743156,2,2013-09-28, 1,MUG/1,F42563743156,3,2013-09-28, 2,STA/1,PUBLIC,1,2013-09-29, 3,STA/2,R64565FG4,2,2013-09-30]
+P1 after : [1,CLO/1,PUBLIC,2,2013-09-28, 1,MUG/1,PUBLIC,3,2013-09-28, 2,STA/1,PUBLIC,1,2013-09-29, 3,STA/2,PUBLIC,2,2013-09-30, 4,SNA/2,PUBLIC,1,2026-11-25]
+P2 java.lang.NullPointerException: Cannot invoke "javax.swing.table.AbstractTableModel.fireTableRowsInserted(int, int)" because "this.understockTableModel" is null
+P3 getCategory("bks") = null
+P4 stored: MUG/3,Mug, Large,Big,10,5.0,777,2,5
+P4 reloaded name='Mug' desc='Large' qty=0 price=10.0
+P5 java.lang.ArrayIndexOutOfBoundsException: Index 1 out of bounds for length 1
+P6 addDiscount duplicate returns false
+P7 public max discount = null
+P7 new member (pts -1) = MEMBER_FIRST, existing member = MEMBER_SUBSEQ
+P8 java.lang.NullPointerException: Cannot invoke "java.lang.Integer.intValue()" because "this.id" is null

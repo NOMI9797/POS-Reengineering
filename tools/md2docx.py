@@ -3,8 +3,8 @@
 Mermaid code blocks are rendered to PNG images with the Mermaid CLI (mmdc).
 Tables with 9+ columns are placed on their own landscape page.
 
-Usage: python md2docx.py <input.md> <output.docx> <path to mmdc> <work dir for images>
-Needs: pip install python-docx==1.1.2 ; npm install @mermaid-js/mermaid-cli@11.4.2
+Usage: python md2docx.py <input.md> <output.docx> <path to mmdc> <work dir for images> [--compact]
+Needs: pip install python-docx==1.1.2 pillow ; npm install @mermaid-js/mermaid-cli@11.4.2
 """
 import re
 import subprocess
@@ -20,6 +20,7 @@ from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
 SRC, OUT, MMDC, WORK = map(Path, sys.argv[1:5])
+COMPACT = "--compact" in sys.argv[5:]   # short documents: no contents page, no page break per section
 WORK.mkdir(parents=True, exist_ok=True)
 
 PORTRAIT_TEXT_WIDTH = Cm(17.0)   # A4 21 cm - 2 x 2 cm margins
@@ -174,10 +175,32 @@ def add_mermaid(lines):
     run.font.size = Pt(9)
 
 
+def add_image(path, caption):
+    """Markdown image ![caption](path): screenshots at their natural size (retina 2x), capped at text width."""
+    global figure_no
+    figure_no += 1
+    from PIL import Image
+    wide = caption.startswith("[landscape] ")      # very wide screenshot: own landscape page
+    if wide:
+        caption = caption[len("[landscape] "):]
+        new_section(landscape=True)
+    pixels_wide = Image.open(path).width
+    width = min(LANDSCAPE_TEXT_WIDTH if wide else PORTRAIT_TEXT_WIDTH, Cm(pixels_wide * 0.0135))
+    doc.add_picture(str(path), width=width)
+    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    cap = doc.add_paragraph()
+    cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = cap.add_run(f"Figure {figure_no}: {caption}")
+    run.italic = True
+    run.font.size = Pt(9)
+    if wide:
+        new_section(landscape=False)
+
+
 def add_title_page(title, extra_lines):
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.paragraph_format.space_before = Pt(120)
+    p.paragraph_format.space_before = Pt(0 if COMPACT else 120)
     run = p.add_run(title)
     run.bold = True
     run.font.size = Pt(26)
@@ -186,6 +209,8 @@ def add_title_page(title, extra_lines):
         q = doc.add_paragraph()
         q.alignment = WD_ALIGN_PARAGRAPH.CENTER
         q.add_run(text).font.size = Pt(14 if k == 0 else 12)
+    if COMPACT:
+        return
     doc.add_page_break()
     doc.add_heading("Contents", level=1)
     toc = doc.add_paragraph()
@@ -244,6 +269,12 @@ while i < len(lines):
         add_table(rows)
         continue
 
+    image = re.match(r"^!\[(.*)\]\((.*)\)\s*$", line)
+    if image:
+        add_image(SRC.parent / image.group(2), image.group(1))
+        i += 1
+        continue
+
     heading = re.match(r"^(#{1,3}) (.*)", line)
     if heading:
         level, text = len(heading.group(1)), heading.group(2)
@@ -258,7 +289,7 @@ while i < len(lines):
             title_done = True
             i = j
             continue
-        if level == 2 and not text.startswith("1."):
+        if level == 2 and not text.startswith("1.") and not COMPACT:
             doc.add_page_break()       # each main section starts on a new page
         doc.add_heading(text.replace("`", ""), level=level)
         i += 1
@@ -266,7 +297,19 @@ while i < len(lines):
 
     numbered = re.match(r"^(\d+)\. (.*)", line)
     if numbered:
-        add_runs(doc.add_paragraph(style="List Number"), numbered.group(2))
+        p = doc.add_paragraph()
+        p.paragraph_format.left_indent = Cm(0.6)
+        p.paragraph_format.first_line_indent = Cm(-0.6)
+        p.add_run(f"{numbered.group(1)}. ")
+        add_runs(p, numbered.group(2))
+    elif line.startswith("- [x] ") or line.startswith("- [ ] "):
+        box = "\u2611 " if line[3] == "x" else "\u2610 "   # ballot box: done / to do
+        p = doc.add_paragraph()
+        p.paragraph_format.left_indent = Cm(0.6)
+        p.paragraph_format.first_line_indent = Cm(-0.6)
+        mark = p.add_run(box)
+        mark.font.size = Pt(12)
+        add_runs(p, line[6:])
     elif line.startswith("- "):
         add_runs(doc.add_paragraph(style="List Bullet"), line[2:])
     elif line.strip():

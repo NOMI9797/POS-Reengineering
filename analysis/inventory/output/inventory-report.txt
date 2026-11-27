@@ -1,0 +1,178 @@
+
+== 1. Asset counts
+production .java files : 40
+production lines       : 3883 (3159 non-blank); 22 files lack a final newline, 11 use CRLF line endings
+test lines             : 1183
+packages               : 13
+test .java files       : 16
+test methods (@Test)   : 45
+data files             : 11
+config/build/tool files: 6 top-level IDE files, 6 in .idea, 7 scripts/tools
+
+== 2. Smell indicators
+TODO comments          : 12
+printStackTrace calls  : 16
+commented-out code     : 62 lines
+non-GUI classes importing javax.swing:
+   transaction/TransactionManager.java
+   transaction/Transaction.java
+   category/CategoryManager.java
+   product/ProductManager.java
+   discount/DiscountManager.java
+   customer/member/MemberManager.java
+
+== 3. Lines of code per class (largest first)
+  287  ConfirmPaymentDialog
+  281  ReceiptDialog
+  270  CheckoutPanel
+  247  ProductManager
+  237  Transaction
+  231  DiscountPanel
+  221  TransactionManager
+  207  ProductPanel
+  179  ReportPanel
+  163  MemberManager
+  155  DiscountManager
+  128  CategoryManager
+  115  StoreApplication
+  113  LoginPanel
+  108  Member
+  104  MemberPanel
+   97  CategoryPanel
+   79  InventoryPanel
+   77  VendorManager
+   75  Product
+   70  Discount
+   56  StoreKeeperManager
+   51  Util
+   51  TransactionItem
+   40  PublicCustomer
+   31  Category
+   29  Vendor
+   28  StoreKeeper
+   24  FeaturePanel
+   20  Printer
+   20  MainFrame
+   12  ProductPanelListener
+   11  ReceiptPrinter
+   11  AdhesiveLabelPrinter
+   10  MemberPanelListener
+   10  InventoryPanelListener
+   10  CheckoutPanelListener
+   10  CategoryPanelListener
+    8  Customer
+    7  DiscountPanelListener
+
+== 4. Obsolete check: references to each class from OTHER files
+(0 = never referenced anywhere else -> obsolete candidate)
+  0  AdhesiveLabelPrinter
+  1  CategoryPanel
+  1  CategoryPanelListener
+  1  CheckoutPanelListener
+  1  ConfirmPaymentDialog
+  1  DiscountManager
+  1  DiscountPanel
+  1  DiscountPanelListener
+  1  InventoryPanel
+  1  InventoryPanelListener
+  1  LoginPanel
+  1  MainFrame
+  1  MemberPanel
+  1  MemberPanelListener
+  1  ProductPanel
+  1  ProductPanelListener
+  1  ReceiptDialog
+  1  ReceiptPrinter
+  1  ReportPanel
+  1  StoreApplication
+  1  StoreKeeper
+  1  StoreKeeperManager
+  1  Vendor
+  1  VendorManager
+  2  CheckoutPanel
+  2  MemberManager
+  2  Printer
+  2  ProductManager
+  2  PublicCustomer
+  3  CategoryManager
+  4  TransactionItem
+  4  TransactionManager
+  8  Discount
+  8  FeaturePanel
+  8  Transaction
+ 10  Category
+ 10  Customer
+ 10  Product
+ 11  Member
+ 16  Util
+VendorManager: the variable created in StoreApplication is used 1 time(s) (only at creation)
+
+== 5. Data files (rows, trailing newline)
+Category.dat       rows=5   trailing-newline=no
+Discounts.dat      rows=5   trailing-newline=no
+Members.dat        rows=11  trailing-newline=no
+Products.dat       rows=10  trailing-newline=no
+Storekeepers.dat   rows=2   trailing-newline=no
+Transactions.dat   rows=4   trailing-newline=no
+VendorsCLO.dat     rows=4   trailing-newline=no
+VendorsDIA.dat     rows=4   trailing-newline=no
+VendorsMUG.dat     rows=4   trailing-newline=no
+VendorsSNA.dat     rows=4   trailing-newline=no
+VendorsSTA.dat     rows=4   trailing-newline=no
+
+== 6. Package dependencies (jdeps, JDK 17.0.19)
+application package -> application package edges:
+   ca -> ca.category
+   ca -> ca.customer
+   ca -> ca.customer.member
+   ca -> ca.discount
+   ca -> ca.gui
+   ca -> ca.gui.checkout
+   ca -> ca.product
+   ca -> ca.storekeeper
+   ca -> ca.transaction
+   ca -> ca.vendor
+   ca.category -> ca.util
+   ca.customer.member -> ca.customer
+   ca.customer.member -> ca.util
+   ca.discount -> ca.customer
+   ca.discount -> ca.customer.member
+   ca.discount -> ca.util
+   ca.gui -> ca.category
+   ca.gui -> ca.customer.member
+   ca.gui -> ca.discount
+   ca.gui -> ca.product
+   ca.gui -> ca.util
+   ca.gui.checkout -> ca.customer
+   ca.gui.checkout -> ca.customer.member
+   ca.gui.checkout -> ca.discount
+   ca.gui.checkout -> ca.gui
+   ca.gui.checkout -> ca.printer
+   ca.gui.checkout -> ca.product
+   ca.gui.checkout -> ca.transaction
+   ca.gui.checkout -> ca.util
+   ca.product -> ca.category
+   ca.product -> ca.util
+   ca.storekeeper -> ca.util
+   ca.transaction -> ca.customer
+   ca.transaction -> ca.customer.member
+   ca.transaction -> ca.discount
+   ca.transaction -> ca.product
+   ca.transaction -> ca.util
+   ca.vendor -> ca.category
+   ca.vendor -> ca.util
+edges: 39
+business packages depending on the GUI toolkit (javax.swing / java.awt):
+   ca.category -> javax.swing.table
+   ca.customer.member -> javax.swing.table
+   ca.discount -> javax.swing.table
+   ca.product -> javax.swing.table
+   ca.transaction -> javax.swing.table
+full jdeps output: analysis/inventory/output/jdeps-packages.txt, DOT graph: analysis/inventory/output/classes.dot
+
+== 7. Original git history (github.com/yangzai/unit1-ca)
+commits      : 289
+first commit : 2016-03-03
+last commit  : 2016-04-04
+author names : 11
+branches     : 38 remote

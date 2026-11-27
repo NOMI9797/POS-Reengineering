@@ -22,7 +22,7 @@ This file passes on what the inventory and legacy analysis found, so B (reverse 
 
 | # | Smell | Where | Notes |
 |---|---|---|---|
-| S-01 | **Divergent change / God class (low cohesion)** | `ProductManager` (246 LOC, 19 methods), `TransactionManager`, `MemberManager`, `CategoryManager`, `DiscountManager` | Each mixes CSV I/O, validation, business rules and a Swing table model |
+| S-01 | **Divergent change / God class (low cohesion)** | `ProductManager` (247 LOC, 19 methods), `TransactionManager`, `MemberManager`, `CategoryManager`, `DiscountManager` | Each mixes CSV I/O, validation, business rules and a Swing table model |
 | S-02 | **Duplicated code** | 7 × `load()`/`store()` doing `Files.lines → splitCsv → forEach`; 7 × near-identical `getTableModel()`; `ProductManager` has 2 copies of the same table model (lines 174-234) | |
 | S-03 | **Large class / long method** | `ConfirmPaymentDialog.getPaymentPanel()` ≈ 200 lines; `ReceiptDialog.getAdditionalInfo()` ≈ 140 lines | |
 | S-04 | **Feature envy / misplaced business logic** | Redemption cap computed in `ConfirmPaymentDialog:158-184`, `Transaction:206-207`, `TransactionManager:159-164` | One version compares **points with dollars** (`Transaction.java:207`) |

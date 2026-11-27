@@ -46,20 +46,30 @@ flowchart LR
     subgraph POS[University Souvenir Store Application]
         UC1([F1 Log in])
         UC2([F2 Check out a sale])
-        UC2a([Identify member])
-        UC2b([Redeem loyalty points])
-        UC2c([Print receipt])
         UC3([F3 Add category])
         UC4([F4 Add member])
         UC5([F5 Add product])
         UC6([F6 Review understock and order])
         UC7([F7 Add discount])
         UC8([F8 View reports])
+        UC2a([Identify member])
+        UC2b([Redeem loyalty points])
+        UC2c([Print receipt])
     end
-    SK --- UC1 & UC2 & UC3 & UC4 & UC5 & UC6 & UC7 & UC8
-    UC2 -. include .-> UC2a
-    UC2 -. extend .-> UC2b
-    UC2 -. extend .-> UC2c
+    SK --- UC1
+    SK --- UC2
+    SK --- UC3
+    SK --- UC4
+    SK --- UC5
+    SK --- UC6
+    SK --- UC7
+    SK --- UC8
+    UC2 ~~~ UC2a
+    UC2 ~~~ UC2b
+    UC2 ~~~ UC2c
+    UC2a -. extend .-> UC2
+    UC2b -. extend .-> UC2
+    UC2c -. extend .-> UC2
 ```
 
 ---

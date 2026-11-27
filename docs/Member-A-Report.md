@@ -138,7 +138,7 @@ The Code view shows the two analysed source trees: `src` with 2,848 lines of cod
 
 **SonarQube view 4: size measures.**
 
-SonarQube counts 40 files, 40 classes, 219 functions and 3,901 lines (2,848 lines of code, 245 comment lines). The 3,901 lines equal the inventory's 3,883 plus the empty line SonarQube counts after the final newline in the 18 files that have one.
+SonarQube counts 40 files, 40 classes, 219 functions and 3,901 lines (2,848 lines of code, 245 comment lines). The 3,901 lines equal the inventory's 3,883 plus the empty line SonarQube counts after the final newline in the 18 files that have one. SonarQube's "lines of code" (2,848) counts only lines that contain code, whereas the inventory's 3,159 non-blank lines also include comment lines, so these two figures measure different things and are not expected to be equal.
 
 ![SonarQube view 4: size measures: 40 files, 40 classes, 219 functions, 3,901 lines](screenshots/member-a-sonar/sonar-04-size-measures.png)
 
